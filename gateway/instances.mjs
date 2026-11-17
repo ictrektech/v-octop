@@ -4,6 +4,7 @@ import { createWriteStream } from 'node:fs';
 import { mkdir, readFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { schedulerEnvironment } from './scheduler.mjs';
+import { mcphubEnvironment } from './mcphub.mjs';
 import { provisionPgv } from './pgv.mjs';
 
 const instances = new Map();
@@ -44,7 +45,7 @@ export async function ensureInstance(options) {
         VOS_APP_VERSION: process.env.VOS_APP_VERSION ?? "unknown", VA_SKILLS_DIR: '/opt/v-octop/skills',
         PLAYWRIGHT_BROWSERS_PATH: '/usr/local/share/v-octop/browsers',
         PATH: '/usr/local/lib/v-octop/.venv/bin:/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin',
-        LANG: 'C.UTF-8', LC_ALL: 'C.UTF-8', ...schedulerEnvironment(record.namespace) },
+        LANG: 'C.UTF-8', LC_ALL: 'C.UTF-8', ...schedulerEnvironment(record.namespace), ...mcphubEnvironment(record.namespace) },
       stdio: ['ignore', 'pipe', 'pipe'],
     });
     entry.child = child;

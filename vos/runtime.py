@@ -20,7 +20,7 @@ from octop.api.app import build_app
 from octop.infra.agents.manager import AgentCreateSpec
 from octop.infra.auth.tokens import PURPOSE_ACCESS, sign_token
 from octop.infra.server import OctopServer
-from octop.infra.vos import synchronize_hybrag_connector
+from octop.infra.vos import synchronize_hybrag_connector, synchronize_mcphub
 
 log = logging.getLogger("v-Octop")
 _decision_synced = False
@@ -242,7 +242,14 @@ async def main():
     await server.user_manager.boot()
     server.services.settings_repo.set("vos_subject", subject)
     await server.user_manager.set_display_name(username, os.environ["VA_DISPLAY_NAME"])
-    await synchronize_hybrag_connector(server.services, server.user_manager.get(username).id)
+    async def discover_connectors():
+        user_id = server.user_manager.get(username).id
+        await asyncio.gather(
+            synchronize_hybrag_connector(server.services, user_id),
+            synchronize_mcphub(server.services.repos.connector_repo, user_id),
+        )
+
+    await discover_connectors()
     try:
         await synchronize(server)
     except Exception:
@@ -274,9 +281,10 @@ async def main():
         while True:
             await asyncio.sleep(10)
             if time.monotonic() - connector_refreshed >= 60:
-                await synchronize_hybrag_connector(
-                    server.services, server.user_manager.get(username).id
-                )
+                try:
+                    await discover_connectors()
+                except Exception:
+                    log.exception("VOS connector refresh failed")
                 connector_refreshed = time.monotonic()
             try:
                 await synchronize(server)

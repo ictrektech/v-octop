@@ -308,9 +308,16 @@ export function useChatComposerResources(
                 : i.default_open === true && i.owner_user_id === currentUserId,
             }));
           applyConnectorOptions(options);
-        });
+        })
+        .catch(() => undefined);
     };
     loadConnectors();
+    const timer =
+      import.meta.env.VITE_VOS === "1" && !remoteBridge
+        ? setInterval(() => {
+            if (document.visibilityState === "visible") loadConnectors();
+          }, 15000)
+        : undefined;
     const onFocus = () => loadConnectors();
     window.addEventListener("focus", onFocus);
     window.addEventListener(CONNECTORS_CHANGED_EVENT, loadConnectors);
@@ -318,6 +325,7 @@ export function useChatComposerResources(
       cancelled = true;
       window.removeEventListener("focus", onFocus);
       window.removeEventListener(CONNECTORS_CHANGED_EVENT, loadConnectors);
+      clearInterval(timer);
     };
   }, [
     resolvedAgentId,

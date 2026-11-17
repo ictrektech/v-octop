@@ -41,7 +41,7 @@ COPY skills/ /opt/v-octop/skills/
 RUN chmod 0755 /opt/v-octop/bin/* && mkdir -p /data/users
 ENV DATA_ROOT=/data PORT=8080 NODE_ENV=production PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1
 ARG GIT_COMMIT=unknown
-LABEL org.opencontainers.image.title="v-Octop" org.opencontainers.image.source="https://github.com/ictrektech/v-agent" org.opencontainers.image.revision=${GIT_COMMIT}
+LABEL org.opencontainers.image.title="v-Octop" org.opencontainers.image.source="https://github.com/ictrektech/v-octop" org.opencontainers.image.revision=${GIT_COMMIT}
 EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s CMD node -e "fetch('http://127.0.0.1:8080/__va/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 ENTRYPOINT ["/opt/v-octop/bin/entrypoint"]

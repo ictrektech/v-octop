@@ -22,7 +22,8 @@ def test_split_tag_accepts_with_or_without_v() -> None:
     assert mod.split_tag("v0.9.31") == ("v0.9.31", "0.9.31")
 
 
-def test_render_download_section_matches_github_asset_names() -> None:
+def test_render_download_section_matches_github_asset_names(monkeypatch) -> None:
+    monkeypatch.delenv("GITHUB_REPOSITORY", raising=False)
     mod = _load()
     body = mod.render_download_section("0.9.31")
     base = "https://github.com/TencentCloud/Octop/releases/download/v0.9.31"

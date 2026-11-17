@@ -11,10 +11,6 @@ category: [productivity]
 icon: icon.png
 arch: [amd64, arm64]
 
-frontend:
-  enabled: true
-  basePath: /app/com.ictrek.v-octop
-
 platform:
   version: ">=3.0.0"
 

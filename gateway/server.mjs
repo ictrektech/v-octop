@@ -54,6 +54,7 @@ import { VosAuthError, verifyVosToken } from './vos-auth.mjs';
 import { closeWeknoraCapabilities, ensureWeknoraCapability, handleWeknoraControl } from './weknora.mjs';
 import { ensureAppCapabilities, closeAppCapabilities } from './apps.mjs';
 import { handleScheduler, schedulerCatalog } from './scheduler.mjs';
+import { handleMcphub } from './mcphub.mjs';
 import { releaseStatus } from './releases.mjs';
 import { ensurePhotocraftCapability, closePhotocraftCapabilities } from './photocraft.mjs';
 
@@ -431,6 +432,10 @@ async function handleFiles(req, res, url) {
  * @returns {Promise<void>}
  */
 async function handleControl(req, res, url) {
+  if (url.pathname.startsWith('/__va/mcphub/')) {
+    await handleMcphub(req, res, url.pathname.slice('/__va/mcphub'.length));
+    return;
+  }
   if (url.pathname.startsWith('/__va/scheduler/')) {
     await handleScheduler(req, res, url.pathname.slice('/__va/scheduler'.length) + url.search);
     return;

@@ -14,7 +14,13 @@ const fixture = createServer((req, res) => {
     return;
   }
   res.setHeader('content-type', 'application/json');
-  if (req.url.includes('userinfo')) {
+  if (req.url === '/app/com.ictrek.mcphub/api/integration/discovery') {
+    const servers = req.headers.authorization === 'Bearer fixture-a' ? [{
+      name: 'Fixture tools', description: 'A private test catalog',
+      mcp_path: '/app/com.ictrek.mcphub/mcp/Fixture%20tools',
+    }] : [];
+    res.end(JSON.stringify({ success: true, data: { servers } }));
+  } else if (req.url.includes('userinfo')) {
     const key = req.headers.authorization?.replace('Bearer ', '');
     if (!['fixture-a', 'fixture-b'].includes(key)) { res.end(JSON.stringify({ code: 10001 })); return; }
     res.end(JSON.stringify({ sub: key, preferred_username: key }));
@@ -23,7 +29,7 @@ const fixture = createServer((req, res) => {
 });
 fixture.listen(18090, '127.0.0.1'); await once(fixture, 'listening');
 const gateway = spawn('/opt/v-octop/bin/entrypoint', [], {
-  env: { ...process.env, VOS_APP_VERSION: '9.8.7', VOS_OIDC_USERINFO_URL: 'http://127.0.0.1:18090/userinfo', V_SCHEDULER_URL: 'http://127.0.0.1:18090', IMAGE_STUDIO_BASE_URL: 'http://127.0.0.1:18090' },
+  env: { ...process.env, VOS_APP_VERSION: '9.8.7', VOS_OIDC_USERINFO_URL: 'http://127.0.0.1:18090/userinfo', V_SCHEDULER_URL: 'http://127.0.0.1:18090', IMAGE_STUDIO_BASE_URL: 'http://127.0.0.1:18090', MCPHUB_URL: 'http://127.0.0.1:18090/app/com.ictrek.mcphub' },
   stdio: ['ignore', 'inherit', 'inherit'],
 });
 try {
@@ -58,6 +64,21 @@ try {
     const schema = await (await fetch(base + prefix + '/api/openapi.json', { headers: { cookie } })).json();
     assert.equal(schema.info.title, 'v-Octop API');
     assert.equal(schema.info.version, '9.8.7');
+    const connectors = await (await fetch(base + prefix + '/api/connector-instances', { headers: { cookie } })).json();
+    const hub = connectors.filter(row => row.kind === 'mcphub');
+    if (access_token === 'fixture-a') {
+      assert.equal(hub.length, 1);
+      assert.equal(hub[0].display_name, 'Fixture tools');
+      assert.equal(hub[0].can_manage, false);
+      assert.equal(hub[0].vos_managed, true);
+      assert.equal(hub[0].has_credentials, true);
+      assert.equal(hub[0].default_open, false);
+      assert.equal((await fetch(base + prefix + '/api/connector-instances/' + hub[0].instance_id, {
+        method: 'DELETE', headers: { cookie },
+      })).status, 404);
+    } else {
+      assert.deepEqual(hub, [], 'MCPHub discovery must preserve user isolation');
+    }
     for (const slug of ['album', 'photocraft', 'v-scheduler']) {
       const detail = await fetch(base + prefix + `/api/agents/${agents[0].agent_id}/skills/${slug}`, { headers: { cookie } });
       assert.equal(detail.status, 200, 'product skill detail: ' + slug);

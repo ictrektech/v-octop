@@ -1,5 +1,5 @@
 /** VOS package version and public releases from this fork only. */
-const SOURCE = 'https://github.com/ictrektech/v-agent/releases';
+const SOURCE = 'https://github.com/ictrektech/v-octop/releases';
 let cached;
 export async function releaseStatus(current, { force = false, fetcher = fetch } = {}) {
   if (!force && cached && cached.current_version === current && Date.now() - cached.checked < 300000) return cached;
@@ -7,7 +7,7 @@ export async function releaseStatus(current, { force = false, fetcher = fetch } 
     service_mode: null, desktop: false, source: SOURCE, last_check_time: new Date().toISOString(),
     release_notes: null, stable_only: true, error: null, error_code: null };
   try {
-    const response = await fetcher('https://api.github.com/repos/ictrektech/v-agent/releases/latest', {
+    const response = await fetcher('https://api.github.com/repos/ictrektech/v-octop/releases/latest', {
       headers: { accept: 'application/vnd.github+json' }, signal: AbortSignal.timeout(10000),
     });
     if (!response.ok) throw new Error(`GitHub release: HTTP ${response.status}`);

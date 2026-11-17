@@ -47,7 +47,7 @@ export default function VosUpdatePanel() {
             label: zh ? "更新源" : "Release source",
             children: (
               <a
-                href="https://github.com/ictrektech/v-agent/releases"
+                href="https://github.com/ictrektech/v-octop/releases"
                 target="_blank"
                 rel="noreferrer"
               >

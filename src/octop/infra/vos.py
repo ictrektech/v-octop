@@ -4,11 +4,86 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import sys
+import time
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+from weakref import WeakKeyDictionary
 
 import httpx
+
+from octop.infra.db.repos.connectors import ConnectorRepo
+
+MCPHUB_KIND = "mcphub"
+_MCPHUB_ID = re.compile(r"mcphub__[0-9a-f]{24}")
+_MCPHUB_CATALOG_MAX_AGE = 120
+
+
+@dataclass(frozen=True)
+class McphubServer:
+    name: str
+    description: str
+    discovered_at: int
+
+
+_mcphub_catalogs: WeakKeyDictionary[
+    ConnectorRepo, dict[int, tuple[float, dict[str, McphubServer]]]
+] = WeakKeyDictionary()
+
+
+def mcphub_servers(repo: ConnectorRepo, user_id: int) -> dict[str, McphubServer]:
+    snapshot = _mcphub_catalogs.get(repo, {}).get(user_id)
+    if snapshot is None or time.monotonic() - snapshot[0] >= _MCPHUB_CATALOG_MAX_AGE:
+        return {}
+    return snapshot[1]
+
+
+async def synchronize_mcphub(repo: ConnectorRepo, user_id: int) -> None:
+    url, key = os.getenv("VA_MCPHUB_URL"), os.getenv("VA_MCPHUB_KEY")
+    if not url or not key:
+        return
+    catalogs = _mcphub_catalogs.setdefault(repo, {})
+    try:
+        async with httpx.AsyncClient(timeout=6, trust_env=False) as client:
+            response = await client.get(
+                f"{url}/catalog", headers={"Authorization": f"Bearer {key}"}
+            )
+        if response.status_code in (401, 403):
+            catalogs.pop(user_id, None)
+            return
+        response.raise_for_status()
+        rows = response.json()["servers"]
+        if not isinstance(rows, list):
+            return
+    except (httpx.HTTPError, ValueError, TypeError, KeyError):
+        return
+
+    previous = mcphub_servers(repo, user_id)
+    now = int(time.time())
+    servers = {}
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        server_id, name = row.get("id"), row.get("name")
+        if not isinstance(server_id, str) or not _MCPHUB_ID.fullmatch(server_id):
+            continue
+        if not isinstance(name, str) or not name:
+            continue
+        existing = previous.get(server_id)
+        servers[server_id] = McphubServer(
+            name, str(row.get("description") or ""), existing.discovered_at if existing else now
+        )
+    catalogs[user_id] = (time.monotonic(), servers)
+
+
+def mcphub_harness_config(server_id: str) -> dict[str, Any]:
+    return {
+        "transport": "streamable_http",
+        "url": f"{os.environ['VA_MCPHUB_URL']}/mcp/{server_id}",
+        "headers": {"Authorization": f"Bearer {os.environ['VA_MCPHUB_KEY']}"},
+    }
 
 
 def vos_mcp_server_names() -> list[str]:

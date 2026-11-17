@@ -19,6 +19,7 @@ x-v-octop-env: &v-octop-env
   # 按 compose 别名直连后端 8080（容器内端口，不是宿主机映射的 29081），
   # 不经过 VOS 网关的 /app 前缀，也就少一次 strip 转发。
   WEKNORA_URL: ${WEKNORA_URL:-http://hybrag-app:8080}
+  MCPHUB_URL: ${MCPHUB_URL:-http://mcphub:3000/app/com.ictrek.mcphub}
   SESSION_TTL_MS: ${SESSION_TTL_MS:-43200000}
   NODE_ENV: production
 
@@ -49,7 +50,7 @@ x-v-octop-base: &v-octop-base
     - "traefik.http.routers.v-octop-app.middlewares=v-octop-strip"
     - "traefik.http.middlewares.v-octop-strip.stripprefix.prefixes=/app/com.ictrek.v-octop"
     # Frontend, APIs and WebSockets share the unique application prefix.
-    - 'traefik.http.routers.v-octop-top.rule=PathPrefix(`/app/com.ictrek.v-octop`) && HeaderRegexp(`Sec-Fetch-Dest`, `document`)'
+    - 'traefik.http.routers.v-octop-top.rule=(Path(`/app/com.ictrek.v-octop`) || Path(`/app/com.ictrek.v-octop/`)) && HeaderRegexp(`Sec-Fetch-Dest`, `document`)'
     - 'traefik.http.routers.v-octop-top.priority=1500'
     - 'traefik.http.routers.v-octop-top.service=v-octop'
     - 'traefik.http.routers.v-octop-top.middlewares=v-octop-top-redirect'

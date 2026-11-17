@@ -10,4 +10,10 @@ Bundled V-Office, AI Album, HybRAG and Image Studio skills and MCP tools use the
 
 Each VOS subject has a separate Linux account, mount/PID namespace, Octop process and persistent home. Platform tokens remain in gateway memory. Networking is shared with the app container, and downstream services enforce user permissions.
 
-With the Octop 1.0.3b5 base, open Experts → Expert Market to install templates, and use a shared expert to open a shared conversation. In Knowledge Bases, use the document or folder action menu to move it. For a custom MCP server that requires a preregistered OAuth application, open the expert’s Connectors → Custom MCP and enter the client credentials supplied by that server. Open [API reference](/app/com.ictrek.v-octop/api/docs) after signing in to inspect the live routes and schemas.
+With the Octop 1.0.3b6 base, open Experts → Expert Market to install templates, and use a shared expert to open a shared conversation. In Knowledge Bases, use the document or folder action menu to move it. For a custom MCP server that requires a preregistered OAuth application, open the expert’s Connectors → Custom MCP and enter the client credentials supplied by that server. Open [API reference](/app/com.ictrek.v-octop/api/docs) after signing in to inspect the live routes and schemas.
+
+## MCPHub
+
+In the same VOS deployment, enable a server in MCPHub and grant your account access. Open v-Octop → Connectors → Enabled connectors. Your available servers appear individually with the “From MCPHub” label. Select one under Optional Connectors in a chat. Discovery runs at sign-in and about every minute. To troubleshoot a missing server, check its enabled state and your permission in MCPHub, then refresh v-Octop after signing in again if the session has expired. Manage servers and permissions in MCPHub.
+
+Open Connectors → API Reference after signing in. `GET /app/com.ictrek.v-octop/api/connector-instances` accepts no inputs and returns JSON visible to the current account. Find `kind: "mcphub"` rows and use their opaque `mcp_server_name` when selecting tools. These rows have `vos_managed: true` and `can_manage: false`. Instance detail, test and mutation routes return 404. The list returns 200 with no MCPHub rows when there are no visible enabled servers and 401 without a valid v-Octop session.

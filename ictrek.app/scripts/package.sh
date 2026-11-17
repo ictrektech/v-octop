@@ -12,7 +12,6 @@ APP_NAME="v-octop"
 APP_ID="com.ictrek.v-octop"
 ROUTER_PAGE_ID="v-octop"
 ROUTER_IFRAME_SRC="/app/com.ictrek.v-octop/?v=__APP_VERSION__"
-FRONTEND_BASE_PATH="/app/com.ictrek.v-octop"
 # A spreadsheet token only identifies the release table; reading it still needs
 # a tenant token derived from feishu_app_secret. Keeping the default lets a
 # fresh clone package without extra setup, matching v-office.
@@ -323,8 +322,6 @@ verify_package() {
 
   local manifest_text compose_text routers_text
   manifest_text="$(tar xOf "$app_tarball" manifest.yml)"
-  grep -Fq "  basePath: ${FRONTEND_BASE_PATH}" <<< "$manifest_text" \
-    || die "manifest frontend.basePath must be ${FRONTEND_BASE_PATH}"
   grep -Fq "id: ${APP_ID}" <<< "$manifest_text" \
     || die "manifest id must be ${APP_ID}"
 
@@ -339,6 +336,8 @@ verify_package() {
     || die "routers.yml must declare page id ${ROUTER_PAGE_ID}"
   grep -Fq "    iframe-src: ${ROUTER_IFRAME_SRC/__APP_VERSION__/${APP_VERSION}}" <<< "$routers_text" \
     || die "routers.yml iframe-src mismatch"
+  grep -Fxq "    entry-point: true" <<< "$routers_text" || die "missing router entry point"
+  grep -Fxq "    embed: true" <<< "$routers_text" || die "router must support the VOS iframe"
 }
 
 acquire_lock() {

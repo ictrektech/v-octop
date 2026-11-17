@@ -34,6 +34,7 @@ export function ConnectorInstanceCard({
   const user = useCurrentUser();
   const accent = catalogEntry ? connectorAccent(catalogEntry) : "#8c8c8c";
   const isOwner = user?.id === instance.owner_user_id;
+  const fromMcphub = instance.kind === "mcphub";
   const ownerLabel =
     instance.owner_display_name || instance.owner_username || "";
   const editable =
@@ -125,7 +126,9 @@ export function ConnectorInstanceCard({
         </div>
 
         <div className={styles.typeCardDesc}>
-          {instance.vos_managed
+          {fromMcphub
+            ? instance.description || t("connectors.mcphubManaged")
+            : instance.vos_managed
             ? t("connectors.vosHybRagAuto")
             : instance.description ||
               catalogEntry?.description ||
@@ -136,7 +139,9 @@ export function ConnectorInstanceCard({
 
       <div className={styles.typeCardFooter}>
         <div className={styles.typeCardHint}>
-          {instance.vos_managed
+          {fromMcphub
+            ? t("connectors.mcphubSource")
+            : instance.vos_managed
             ? t("connectors.vosAutoConnected")
             : !instance.has_credentials
             ? t("connectors.noCredentials", "缺少凭证")

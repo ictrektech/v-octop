@@ -2532,6 +2532,17 @@ export default function ConnectorsPage() {
     <PageShell.Tabbed
       title={t("pageShell.connectors.title")}
       subtitle={t("pageShell.connectors.subtitle")}
+      actions={
+        import.meta.env.VITE_VOS === "1" ? (
+          <Button
+            href={`${import.meta.env.BASE_URL}api/docs`}
+            target="_blank"
+            rel="noreferrer"
+          >
+            {t("connectors.apiReference")}
+          </Button>
+        ) : undefined
+      }
       tabBar={
         <TabBar
           tabs={visibleConnectorTabs}
