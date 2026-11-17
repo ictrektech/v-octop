@@ -18,6 +18,7 @@ import UpdateConfig from "./UpdateConfig";
 import CaptchaSettingsPanel from "./CaptchaSettings";
 import WebauthnSettingsPanel from "./WebauthnSettings";
 import AppConfigPanel from "./AppConfigPanel";
+import VosOpsPanel from "./VosOpsPanel";
 import PageShell from "../../../layouts/PageShell";
 import TabBar, { type TabBarItem } from "../../../components/TabLabel/TabBar";
 import tabStyles from "./tabContent.module.less";
@@ -33,7 +34,8 @@ type TabKey =
   | "updates"
   | "captcha"
   | "webauthn"
-  | "config";
+  | "config"
+  | "vos-ops";
 
 const TABS: TabBarItem<TabKey>[] = [
   { key: "env-vars", labelKey: "nav.environments", icon: Variable },
@@ -45,6 +47,9 @@ const TABS: TabBarItem<TabKey>[] = [
     ? []
     : [{ key: "webauthn" as const, labelKey: "nav.passkeys", icon: KeyRound }]),
   { key: "config", labelKey: "adminAppConfig.title", icon: FileJson },
+  ...(import.meta.env.VITE_VOS === "1"
+    ? [{ key: "vos-ops" as const, labelKey: "vosOps.title", icon: ShieldCheck }]
+    : []),
   { key: "updates", labelKey: "nav.checkUpdates", icon: RefreshCw },
 ];
 
@@ -56,7 +61,8 @@ function parseTab(raw: string | null): TabKey {
     raw === "updates" ||
     raw === "captcha" ||
     raw === "webauthn" ||
-    raw === "config"
+    raw === "config" ||
+    (raw === "vos-ops" && import.meta.env.VITE_VOS === "1")
   ) {
     return raw;
   }
@@ -101,6 +107,8 @@ export default function AdvancedSettingsPage() {
         return <WebauthnSettingsPanel />;
       case "config":
         return <AppConfigPanel />;
+      case "vos-ops":
+        return <VosOpsPanel />;
     }
   };
 

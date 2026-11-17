@@ -14,7 +14,11 @@ const fixture = createServer((req, res) => {
     return;
   }
   res.setHeader('content-type', 'application/json');
-  if (req.url === '/app/com.ictrek.mcphub/api/integration/discovery') {
+  if (req.url === '/v1000/rbac/permission/my') {
+    res.end(JSON.stringify({ code: 0, data: { is_super_admin: req.headers.authorization === 'Bearer fixture-a' } }));
+  } else if (req.url.startsWith('/v1000/app/status?')) {
+    res.end(JSON.stringify({ code: 0, data: { app_id: 'com.ictrek.fixture', version: '1', state: 'installed' } }));
+  } else if (req.url === '/app/com.ictrek.mcphub/api/integration/discovery') {
     const servers = req.headers.authorization === 'Bearer fixture-a' ? [{
       name: 'Fixture tools', description: 'A private test catalog',
       mcp_path: '/app/com.ictrek.mcphub/mcp/Fixture%20tools',
@@ -92,6 +96,29 @@ try {
     for (const path of ['/api/auth/mfa/totp/begin', '/api/auth/passkey/login/options', '/api/settings/webauthn']) {
       assert.equal((await fetch(base + prefix + path, { method: 'POST', headers: { cookie, 'content-type': 'application/json' }, body: '{}' })).status, 403, 'VOS owns account security: ' + path);
     }
+    const ops = base + prefix + '/__va/vos-ops';
+    const opsHeaders = { cookie, 'x-va-ops': '1', 'content-type': 'application/json' };
+    const read = '/status?id=com.ictrek.fixture';
+    assert.equal((await fetch(ops + read, { headers: opsHeaders })).status, 403, 'diagnostics require a grant');
+    const grantReply = await fetch(ops + '/authorize', {
+      method: 'POST', headers: opsHeaders, body: JSON.stringify({ expert: false }),
+    });
+    assert.equal(grantReply.status, access_token === 'fixture-a' ? 200 : 403, 'only VOS super admins can authorize diagnosis');
+    if (grantReply.ok) {
+      const { grant } = await grantReply.json();
+      const granted = { ...opsHeaders, 'x-va-ops-grant': grant };
+      const reading = await fetch(ops + read, { headers: granted });
+      assert.equal(reading.status, 200);
+      assert.equal((await reading.json()).appId, 'com.ictrek.fixture');
+      assert.equal((await fetch(ops + '/execute', {
+        method: 'POST', headers: granted,
+        body: JSON.stringify({ confirmation: 'made-up', targetId: 'com.ictrek.fixture' }),
+      })).status, 409, 'a forged confirmation cannot execute an operation');
+      assert.equal((await fetch(ops + '/close', {
+        method: 'POST', headers: granted, body: '{}',
+      })).status, 200);
+      assert.equal((await fetch(ops + read, { headers: granted })).status, 403);
+    }
     const claims = JSON.parse(Buffer.from(session.access_token.split('.')[1], 'base64url'));
     assert.equal(claims.purpose, 'access', 'runtime tokens must declare their access purpose');
     assert.equal(claims.mfa_version, 0);
@@ -138,12 +165,14 @@ asyncio.run(main())
 import asyncio,json,sys
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
+from pathlib import Path
+assert not Path("/var/run/docker.sock").exists(), "raw Docker socket must stay outside the jail"
 async def main():
     async with stdio_client(StdioServerParameters(command=sys.executable,args=['/usr/local/lib/v-octop/vos/mcp_server.py'])) as (read,write):
         async with ClientSession(read,write) as session:
             await session.initialize()
             tools=await session.list_tools()
-            assert any(t.name=='vos_api' for t in tools.tools)
+            assert {'vos_api', 'vos_diagnostics'} <= {t.name for t in tools.tools}
             result=await session.call_tool('vos_api',{'service':'image-studio','method':'GET','path':'/health'})
             assert not result.isError
             payload=json.loads(result.content[0].text)

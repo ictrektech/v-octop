@@ -20,3 +20,7 @@ Latest synchronization: upstream/main bf134dbd (v1.0.3b6, 2026-11-17).
 Preserve Linux-only VOS CI and keep upstream account/PR workflows archived.
 v-harness adaptation review: 73619167c3 (0.1.19), image result delivery and
 PhotoCraft preview/session discipline; retain native v-Octop capability tools.
+
+VOS operations reference: ictrektech/v-harness 43cb212e99 (MIT). v-Octop uses its
+own VOS super-admin check and diagnostic grant. Browser-confirmed changes are
+limited to supported application, container and image targets.

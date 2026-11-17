@@ -37,6 +37,9 @@ x-v-octop-base: &v-octop-base
     - apparmor:unconfined
   volumes:
     - ${VOS_APP_STORAGE_PATH}/data:/data
+    # The root gateway handles the allowlisted VOS operations. Tenant jails do
+    # not mount /var/run and receive only a read-only diagnostics capability.
+    - /var/run/docker.sock:/var/run/docker.sock
   networks:
     vos_default:
       aliases:

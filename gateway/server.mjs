@@ -50,11 +50,12 @@ import {
   verifySession,
 } from './session.mjs';
 import { findUser, upsertUser } from './users.mjs';
-import { VosAuthError, verifyVosToken } from './vos-auth.mjs';
+import { VosAuthError, userinfoUrl, verifyVosToken } from './vos-auth.mjs';
 import { closeWeknoraCapabilities, ensureWeknoraCapability, handleWeknoraControl } from './weknora.mjs';
 import { ensureAppCapabilities, closeAppCapabilities } from './apps.mjs';
 import { handleScheduler, schedulerCatalog } from './scheduler.mjs';
 import { handleMcphub } from './mcphub.mjs';
+import { createVosOps, OPS_PATH } from './vos-ops.mjs';
 import { releaseStatus } from './releases.mjs';
 import { ensurePhotocraftCapability, closePhotocraftCapabilities } from './photocraft.mjs';
 
@@ -101,6 +102,16 @@ function isSecure(req) {
 function authenticate(req) {
   return verifySession(parseCookies(req.headers.cookie)[SESSION_COOKIE], secret);
 }
+
+function opsSession(req) {
+  const signed = parseCookies(req.headers.cookie)[SESSION_COOKIE];
+  const session = verifySession(signed, secret);
+  return session && { ...session, sessionId: createHash('sha256').update(signed).digest('hex') };
+}
+
+const vosOps = createVosOps({
+  sessionFor: opsSession, tokenFor: accessTokenFor, userinfoUrl, readBody: readJsonBody, respond: json,
+});
 
 /**
  * Strip the VOS application prefix so the same routes work behind either a
@@ -432,6 +443,10 @@ async function handleFiles(req, res, url) {
  * @returns {Promise<void>}
  */
 async function handleControl(req, res, url) {
+  if (url.pathname.startsWith(OPS_PATH + '/')) {
+    await vosOps.handle(req, res, url);
+    return;
+  }
   if (url.pathname.startsWith('/__va/mcphub/')) {
     await handleMcphub(req, res, url.pathname.slice('/__va/mcphub'.length));
     return;
@@ -653,6 +668,8 @@ async function handleControl(req, res, url) {
   }
 
   if (url.pathname === '/__va/logout' && req.method === 'POST') {
+    const session = opsSession(req);
+    if (session) vosOps.closeSession(session.sessionId);
     json(res, 200, { authenticated: false }, {
       'set-cookie': cookie(SESSION_COOKIE, '', { maxAgeSeconds: 0, secure: isSecure(req) }),
     });

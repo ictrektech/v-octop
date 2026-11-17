@@ -73,3 +73,9 @@ The Octop 1.0.3b5 base adds shared expert conversations, moving knowledge-base d
 ## Upstream synchronization (2026-11-17)
 
 Merged Octop `1.0.3b6` from `upstream/main` at `bf134dbd`. The dashboard adds chat-sidebar expert creation and sorting, knowledge-base entity graphs, and choosing the most recent or a pinned history conversation for cron jobs. Custom MCP connections can authorize again and resume a turn when OAuth expires. The VOS login flow, language bridge and application capabilities continue to use the VOS user's identity.
+
+## VOS operations
+
+Open Admin → Application Settings → VOS Operations. Only a VOS super administrator can authorize a diagnostics grant, which lasts up to 15 minutes. View application and workflow state, container health, filtered logs, Docker-published ports and unused images. Enable expert access when authorizing to use `vos_diagnostics` in your experts. The grant and any expert access end when you close it or sign out of v-Octop.
+
+Review the target preview and enter its full ID for each restart, stop or cleanup. The preview is single-use and expires in 60 seconds. Restart applies to installed applications. Stop and container cleanup apply to eligible older versions of installed apps. Cleanup preserves volumes. Image removal is limited to unused untagged images without digests. The v-Octop gateway holds the Docker socket. Tenant jails receive a read-only capability for authorized diagnostics and cannot access the socket. The panel includes the bilingual API reference.

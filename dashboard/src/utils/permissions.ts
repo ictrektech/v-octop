@@ -142,6 +142,7 @@ export const USERS_TAB_PERMISSIONS = {
 export const ADVANCED_TAB_PERMISSIONS = {
   "env-vars": "envs",
   observability: "observability",
+  "vos-ops": "observability",
   backup: "backup",
   https: "tls",
   updates: "update",

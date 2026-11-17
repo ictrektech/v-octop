@@ -161,5 +161,27 @@ async def scheduler_infer(
         }
 
 
+@mcp.tool()
+async def vos_diagnostics(
+    query: Literal["inventory", "status", "logs", "app-logs", "diagnose"],
+    id: str | None = None,
+) -> dict:
+    """Read VOS diagnostics after the administrator enables expert access in VOS Operations.
+
+    Use inventory for installed applications, stack containers, published ports and images.
+    Status and app-logs take an application ID. Logs and diagnose take a full container ID.
+    Diagnose summarizes runtime state, exit code, OOM, health and recent errors.
+    """
+    url, key = os.environ.get("VA_VOS_OPS_URL"), os.environ.get("VA_VOS_OPS_KEY")
+    if not url or not key:
+        return {"status": 503, "body": {"error": "diagnostics-unavailable"}}
+    params = {} if query == "inventory" else {"appId" if query == "app-logs" else "id": id or ""}
+    async with httpx.AsyncClient(timeout=25, trust_env=False) as client:
+        response = await client.get(
+            f"{url}/{query}", params=params, headers={"Authorization": f"Bearer {key}"}
+        )
+    return {"status": response.status_code, "body": response.json()}
+
+
 if __name__ == "__main__":
     mcp.run(transport="stdio")

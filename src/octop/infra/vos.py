@@ -169,7 +169,13 @@ def add_vos_capabilities(
         "args": ["/usr/local/lib/v-octop/vos/mcp_server.py"],
         "env": {
             key: os.environ[key]
-            for key in ("HOME", "VA_SCHEDULER_URL", "VA_SCHEDULER_KEY")
+            for key in (
+                "HOME",
+                "VA_SCHEDULER_URL",
+                "VA_SCHEDULER_KEY",
+                "VA_VOS_OPS_URL",
+                "VA_VOS_OPS_KEY",
+            )
             if key in os.environ
         },
     }
