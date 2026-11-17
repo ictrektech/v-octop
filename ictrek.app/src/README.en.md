@@ -8,6 +8,8 @@ V-Scheduler models visible to the current VOS user refresh every minute. Chat Co
 
 Bundled V-Office, AI Album, HybRAG and Image Studio skills and MCP tools use the current user's authorization. These apps must be installed and accept this OIDC client where restricted. Missing apps, unavailable services and denied permissions produce errors. Third-party connectors retain their own authorization flows.
 
+Find HybRAG under Connectors → Enabled connectors. The running gateway restores a missing local socket entry, and the connector reconnects after its next successful probe. Manually disabled connectors stay disabled. The connector API keeps the same request and response formats.
+
 Each VOS subject has a separate Linux account, mount/PID namespace, Octop process and persistent home. Platform tokens remain in gateway memory. Networking is shared with the app container, and downstream services enforce user permissions.
 
 With the Octop 1.0.3b6 base, open Experts → Expert Market to install templates, and use a shared expert to open a shared conversation. In Knowledge Bases, use the document or folder action menu to move it. For a custom MCP server that requires a preregistered OAuth application, open the expert’s Connectors → Custom MCP and enter the client credentials supplied by that server. Open [API reference](/app/com.ictrek.v-octop/api/docs) after signing in to inspect the live routes and schemas.

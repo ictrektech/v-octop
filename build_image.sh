@@ -67,6 +67,7 @@ Environment:
   FEISHU_SHEET_TITLE       Optional default for --sheet, comma-separated
   NPM_REGISTRY             npm registry used during the image build
   V_AGENT_SOURCE_REVISION Full source commit supplied by the local checkout
+  V_AGENT_TAG_SUFFIX      Optional lowercase alphanumeric suffix for same-day releases
   APT_MIRROR               Debian package mirror for apt (empty keeps upstream)
 EOF
 }
@@ -394,9 +395,12 @@ if [[ "$DRY_RUN" != "1" && "$SKIP_BUILD" != "1" ]]; then
 fi
 
 DATE="$(date +%Y%m%d)"
-BASE_TAG="${PROFILE_TAG}_${DATE}"
-
-TAG="$BASE_TAG"
+TAG_SUFFIX="${V_AGENT_TAG_SUFFIX:-}"
+if [[ -n "$TAG_SUFFIX" && ! "$TAG_SUFFIX" =~ ^[a-z0-9]{1,32}$ ]]; then
+  err 'V_AGENT_TAG_SUFFIX must be 1–32 lowercase letters or digits'
+  exit 1
+fi
+TAG="${PROFILE_TAG}_${DATE}${TAG_SUFFIX:+_${TAG_SUFFIX}}"
 
 log "TARGET=${TARGET} ARCH=${ARCH}"
 log "TARGET_SHEETS=${TARGET_SHEET_TITLES[*]}"
@@ -407,7 +411,6 @@ if [[ "$DRY_RUN" != "1" && "$SKIP_BUILD" != "1" && ! "$REVISION" =~ ^[0-9a-f]{40
   err "Set V_AGENT_SOURCE_REVISION to the full commit from the local checkout before building"
   exit 1
 fi
-TAG="${BASE_TAG}"
 log "IMAGE=${IMAGE}:${TAG}"
 log "REVISION=${REVISION}"
 

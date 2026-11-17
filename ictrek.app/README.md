@@ -14,7 +14,7 @@ Existing generation, voice, decision, search and local embedding options remain 
 
 V-Office, AI Album, PhotoCraft and Image Studio are exposed through user-owned Unix sockets, bundled skills and the `vos-apps` MCP server. Their route allowlists preserve the current user's upstream permissions. Each target application must be installed and accept the `com.ictrek.v-octop` OIDC client where audience restrictions apply. Other third-party connectors retain their own authorization flows.
 
-HybRAG uses one automatically managed native connector, replacing the duplicate WeKnora skill. It lists knowledge bases and documents, retrieves passages and reads documents through the current user's private socket. Tokens and active-area selection stay in the gateway; no API key or tenant ID is required. Missing HybRAG installations remain disconnected silently. Discovery repeats each minute, and the connector page refreshes automatically after installation. HybRAG area changes are picked up by the next token exchange within a minute. A manually disabled connector stays disabled.
+HybRAG uses one automatically managed native connector, replacing the duplicate WeKnora skill. It lists knowledge bases and documents, retrieves passages and reads documents through the current user's private socket. Tokens and active-area selection stay in the gateway; no API key or tenant ID is required. Missing HybRAG installations remain disconnected silently. Discovery repeats each minute, and the connector page refreshes automatically after installation. HybRAG area changes are picked up by the next token exchange within a minute. The gateway restores a missing HybRAG socket entry within five seconds while its listener remains open. Discovery restores the connector on its next successful probe. A manually disabled connector stays disabled.
 
 MCPHub is optional. Enable a server in MCPHub and grant the intended VOS account access. Open v-Octop → Connectors → Enabled connectors to see each discovered server, then select it under Optional Connectors in a chat or save it in the expert’s composer defaults. Discovery runs on sign-in and approximately every minute. Empty lists are valid when the Hub is absent or the account has no enabled servers. If a row is missing after a minute, check that both apps are installed on the same VOS, that the server is enabled and visible to this account, then reopen v-Octop if the VOS session has expired. Configure and remove servers in MCPHub. Its grants are checked again when tools are used.
 
@@ -42,6 +42,8 @@ Use architecture-matched hosts, after rsync from the local checkout to `~/dev/re
 V_AGENT_SOURCE_REVISION=<local-commit> ./build_image.sh --target amd --sheet AMD_with_cuda,AMD_with_mxn100
 V_AGENT_SOURCE_REVISION=<local-commit> ./build_image.sh --target arm --sheet ARM_with_cuda,ARM_without_cuda,l4t,thor_spark,SOPHON_bm1688
 ```
+
+For a second release on the same day, set `V_AGENT_TAG_SUFFIX` to the new commit's short hash on both builds and any `--feishu-only` invocation. This keeps the previous package's image tag pullable.
 
 Images use only `swr.cn-southwest-2.myhuaweicloud.com/ictrek/v-octop`, with independent Feishu columns named `v-Octop`. No v-harness image or column is modified. `ictrek.app/scripts/package.sh` resolves the published V-Scheduler version and validates the pull package.
 

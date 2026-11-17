@@ -18,15 +18,17 @@
  * @module v-octop/gateway/weknora
  */
 
+import { randomBytes } from 'node:crypto';
 import { createServer, request as httpRequest } from 'node:http';
 import { chmodSync, readFileSync } from 'node:fs';
-import { unlink } from 'node:fs/promises';
+import { link, unlink } from 'node:fs/promises';
 import { join } from 'node:path';
 
 import { runUserHelper } from './instances.mjs';
 import { accessTokenFor } from './office.mjs';
 
 const SOCKET_NAME = 'weknora.sock';
+const SOCKET_REPAIR_INTERVAL_MS = 5_000;
 const UPSTREAM_TIMEOUT_MS = 300_000;
 const PROBE_TIMEOUT_MS = 2_000;
 /** Consecutive upstream failures before the resolved address is re-probed. */
@@ -95,7 +97,7 @@ const ROUTES = [
   { method: 'POST', pattern: /^\/api\/v1\/knowledge-chat\/[^/]+$/ },
 ];
 
-/** @type {Map<string, Promise<import('node:http').Server>>} */
+/** @type {Map<string, ReturnType<typeof start>>} */
 const capabilities = new Map();
 
 /** Resolved upstream, cached after the first successful probe. */
@@ -312,14 +314,13 @@ async function forward(namespace, req, res, path = new URL(req.url ?? '/', 'http
 /**
  * Start (once) the listening socket for one tenant.
  * @param {{ namespace: string, linuxName: string, home: string, userHelper: string }} options
- * @returns {Promise<import('node:http').Server>}
+ * @returns {Promise<{server: import('node:http').Server, repair: NodeJS.Timeout}>}
  */
 async function start(options) {
   const { namespace, linuxName, home, userHelper } = options;
-  const socketPath = join(home, '.vagent', SOCKET_NAME);
-  await unlink(socketPath).catch((error) => {
-    if (error?.code !== 'ENOENT') throw error;
-  });
+  const socketDir = join(home, '.vagent');
+  const socketPath = join(socketDir, SOCKET_NAME);
+  const listenerPath = join(socketDir, `weknora-${randomBytes(8).toString('hex')}.sock`);
 
   const server = createServer((req, res) => {
     void forward(namespace, req, res).catch((error) => {
@@ -330,18 +331,39 @@ async function start(options) {
   });
   server.on('clientError', (_error, socket) => { socket.destroy(); });
 
+  // Node unlinks the path passed to listen on close. Each gateway binds its
+  // own path so retiring a gateway cannot unlink a newer gateway's listener.
   await new Promise((resolve, reject) => {
     server.once('error', reject);
-    server.listen(socketPath, () => {
+    server.listen(listenerPath, () => {
       server.off('error', reject);
-      // The socket belongs to root until `claim` hands it to the tenant.
-      chmodSync(socketPath, 0o600);
       resolve();
     });
   });
 
-  await runUserHelper(userHelper, ['claim', linuxName, socketPath]);
-  return server;
+  try {
+    chmodSync(listenerPath, 0o600);
+    await runUserHelper(userHelper, ['claim', linuxName, listenerPath]);
+    await unlink(socketPath).catch(error => {
+      if (error.code !== 'ENOENT') throw error;
+    });
+    await link(listenerPath, socketPath);
+  } catch (error) {
+    server.close();
+    throw error;
+  }
+
+  // Repair the shared pathname if a legacy gateway unlinks it at shutdown.
+  // link is atomic and leaves an existing pathname alone.
+  const repair = setInterval(() => {
+    void link(listenerPath, socketPath).catch(error => {
+      if (error.code !== 'EEXIST') {
+        console.error('weknora socket repair failed:', error.code ?? error.name);
+      }
+    });
+  }, SOCKET_REPAIR_INTERVAL_MS);
+  repair.unref();
+  return { server, repair };
 }
 
 /**
@@ -394,8 +416,10 @@ export async function closeWeknoraCapabilities() {
   probing = undefined;
   failures = 0;
   await Promise.all(entries.map(async ([, starting]) => {
-    const server = await starting.catch(() => undefined);
-    if (!server) return;
+    const listener = await starting.catch(() => undefined);
+    if (!listener) return;
+    const { server, repair } = listener;
+    clearInterval(repair);
     await new Promise((resolve) => { server.close(() => { resolve(); }); });
   }));
 }
